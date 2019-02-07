@@ -1,0 +1,13 @@
+name: image_tap_coordinates
+description: A plugin for panning and zooming images by touch.
+
+author: George Rappel <georgerappelmoreira+fitc@gmail.com>
+homepage: https://github.com/georgerappel/flutter_image_tap_coordinates
+
+version: 1.0.0
+environment:
+  sdk: ">=1.19.0 < 3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
