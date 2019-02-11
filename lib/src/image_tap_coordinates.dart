@@ -13,14 +13,32 @@ typedef TapCoordinatesCallback = void Function(Offset tapCoordinates);
 
 
 class ImageTapCoordinates extends StatefulWidget {
+
   final ImageProvider image;
+
   final double maxScale;
+
   final double minScale;
+
+  /// Initial image scale. Must be between minScale and maxScale, otherwise
+  /// will be ignored.
+  /// If not present or null, the image will be fitted to the screen.
   final double initScale;
+
   final TapCoordinatesCallback tapCallback;
+
   final Color backgroundColor;
+
   final Widget placeholder;
+
+  /// Whether the tapCallback function should be called if the tap was out of
+  /// the image bounds.
   final bool callbackIfOffBounds;
+
+  /// A controller that allows you to programatically set the image scale and
+  /// position.
+  final ImageTapController controller;
+
 
   ImageTapCoordinates(
     this.image, {
@@ -35,10 +53,11 @@ class ImageTapCoordinates extends StatefulWidget {
     this.tapCallback,
     this.callbackIfOffBounds = true,
     this.backgroundColor = Colors.black,
-
+    this.controller,
     /// Placeholder widget to be used while [image] is being resolved.
     this.placeholder,
-  }) : super(key: key);
+  }) : assert(minScale > 0.0),
+        super(key: key);
 
   @override
   _TapCoordinatesState createState() => _TapCoordinatesState();
@@ -46,11 +65,12 @@ class ImageTapCoordinates extends StatefulWidget {
 
 // See /flutter/examples/layers/widgets/gestures.dart
 class _TapCoordinatesState extends State<ImageTapCoordinates> {
-  RenderBox _box;
+  ImageTapController controller = ImageTapController();
 
   ImageStream _imageStream;
   ui.Image _image;
   Size _imageSize;
+  RenderBox _box;
 
   Offset _startingFocalPoint;
 
@@ -64,13 +84,22 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   Size _canvasSize;
 
-  void _centerAndScaleImage() {
+  @override
+  void initState() {
+    super.initState();
+    if(widget.controller != null){
+      controller = widget.controller;
+    }
+    controller.addListener(controllerListener);
+  }
+
+  void _centerAndResetScale() {
     _imageSize = Size(
       _image.width.toDouble(),
       _image.height.toDouble(),
     );
 
-    if(widget.initScale != null){
+    if(widget.initScale != null && widget.initScale >= widget.minScale && widget.initScale <= widget.maxScale){
       _scale = widget.initScale;
     } else {
       _scale = math.min(
@@ -86,33 +115,55 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
     Offset delta = _canvasSize - fitted;
     _offset = delta / 2.0; // Centers the image
-
-    print(_scale);
   }
 
+  void controllerListener(){
+    if(controller.scale != null && controller.scale != _scale) {
+      _scale = controller.scale;
+//      Size fitted = Size(
+//        _imageSize.width * _scale,
+//        _imageSize.height * _scale,
+//      );
+//
+//      Offset delta = _canvasSize - fitted;
+//      _offset = delta / 2.0;
+    }
+
+    if(controller.center != null && controller.center != _offset) {
+//      Offset newOffset = Offset(
+//        controller.center.dx / 2 * _scale,
+//        controller.center.dy / 2 * _scale,
+//      );
+//
+//      _previousOffset = _offset;
+      _offset = controller.center ;
+      //TODO Correctly handle center changes.
+    }
+
+    if(this.mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Doubles the zoom for every double tap, until it reaches the limit for
+  /// [widget.maxScale], then resets the scale and recenters the image.
   Function() _handleDoubleTap(BuildContext ctx) {
     return () {
       double newScale;
       newScale = _scale * 2;
 
-      if(widget.initScale != null && _scale > widget.initScale
-        || newScale > widget.maxScale){
-        // If the scale isn't the initial scale, center again
-        _centerAndScaleImage();
-        setState(() {});
-        return;
+      if(newScale > widget.maxScale) {
+        _centerAndResetScale();
+        setState((){});
+      } else {
+        // We want to zoom in on the center of the screen.
+        // Since we're zooming by a factor of 2, we want the new offset to be twice
+        // as far from the center in both width and height than it is now.
+        Offset center = ctx.size.center(Offset.zero);
+        Offset newOffset = _offset * 2 - center;
+
+        controller.update(newCenter: newOffset, newScale: newScale);
       }
-
-      // We want to zoom in on the center of the screen.
-      // Since we're zooming by a factor of 2, we want the new offset to be twice
-      // as far from the center in both width and height than it is now.
-      Offset center = ctx.size.center(Offset.zero);
-      Offset newOffset = _offset * 2 - center;
-
-      setState(() {
-        _scale = newScale;
-        _offset = newOffset;
-      });
     };
   }
 
@@ -133,10 +184,9 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
         (_startingFocalPoint - _previousOffset) / _previousScale;
     final Offset newOffset = d.focalPoint - normalizedOffset * newScale;
 
-    setState(() {
-      _scale = newScale;
-      _offset = newOffset;
-    });
+    controller.update(newCenter: newOffset, newScale: newScale);
+
+    setState(() {});
   }
 
   void _handleTapUp(TapUpDetails details){
@@ -178,7 +228,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
       if (orientation != _previousOrientation) {
         _previousOrientation = orientation;
         _canvasSize = constraints.biggest;
-        _centerAndScaleImage();
+        _centerAndResetScale();
       }
 
       return new GestureDetector(
@@ -247,3 +297,53 @@ class _ZoomableImagePainter extends CustomPainter {
     return old.image != image || old.offset != offset || old.scale != scale;
   }
 }
+
+class ImageTapController extends ValueNotifier<ImageTapControllerValue> {
+  ImageTapController({ Offset center })
+    : super(ImageTapControllerValue(center: center, scale: 0));
+
+  Offset get center => value.center;
+  /// The image coordinates, in pixels, that should be centered on the screen.
+  set center(Offset newCenter) {
+    value = value.copyWith(center: newCenter);
+  }
+
+  double get scale => value.scale;
+  /// Change the image scale
+  set scale(double newScale) {
+    value = value.copyWith(scale: newScale);
+  }
+
+  /// Update more than one variables at the same time. Recommended for
+  /// better performance.
+  void update({Offset newCenter, double newScale}){
+    value = value.copyWith(
+        center: newCenter ?? value.center,
+        scale: newScale ?? value.scale
+    );
+  }
+}
+
+@immutable
+class ImageTapControllerValue {
+  const ImageTapControllerValue({
+    @required this.center,
+    @required this.scale,
+  });
+
+  final Offset center;
+  final double scale;
+
+  /// Creates a copy of this value but with the given fields replaced with the new values.
+  ImageTapControllerValue copyWith({
+    Offset center,
+    double scale,
+  }) {
+    return ImageTapControllerValue(
+        center: center ?? this.center,
+        scale: scale ?? this.scale,
+    );
+  }
+}
+
+
