@@ -29,6 +29,7 @@ class ImageTapCoordinates extends StatefulWidget {
 
   final Color backgroundColor;
 
+  /// Widget shown while loading the image. Tipically a [ProgressIndicator].
   final Widget placeholder;
 
   /// Whether the tapCallback function should be called if the tap was out of
@@ -43,8 +44,6 @@ class ImageTapCoordinates extends StatefulWidget {
   ImageTapCoordinates(
     this.image, {
     Key key,
-    @deprecated double scale,
-
     /// Maximum ratio to blow up image pixels. A value of 2.0 means that the
     /// a single device pixel will be rendered as up to 4 logical pixels.
     this.maxScale = 2.0,
