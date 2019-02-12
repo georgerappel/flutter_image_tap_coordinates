@@ -248,6 +248,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   @override
   void reassemble() {
+    print("Image reassemble");
     _resolveImage(); // in case the image cache was flushed
     super.reassemble();
   }
