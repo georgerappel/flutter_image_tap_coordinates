@@ -268,6 +268,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
   @override
   void dispose() {
     _imageStream.removeListener(_handleImageLoaded);
+    controller.dispose();
     super.dispose();
   }
 }
