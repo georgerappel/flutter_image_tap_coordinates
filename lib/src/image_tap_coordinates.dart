@@ -242,13 +242,14 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   @override
   void didChangeDependencies() {
-    _resolveImage();
+    if(_imageStream == null) {
+      _resolveImage();
+    }
     super.didChangeDependencies();
   }
 
   @override
   void reassemble() {
-    print("Image reassemble");
     _resolveImage(); // in case the image cache was flushed
     super.reassemble();
   }
