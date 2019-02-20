@@ -144,28 +144,6 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
     }
   }
 
-  /// Doubles the zoom for every double tap, until it reaches the limit for
-  /// [widget.maxScale], then resets the scale and recenters the image.
-  Function() _handleDoubleTap(BuildContext ctx) {
-    return () {
-      double newScale;
-      newScale = _scale * 2;
-
-      if(newScale > widget.maxScale) {
-        _centerAndResetScale();
-        setState((){});
-      } else {
-        // We want to zoom in on the center of the screen.
-        // Since we're zooming by a factor of 2, we want the new offset to be twice
-        // as far from the center in both width and height than it is now.
-        Offset center = ctx.size.center(Offset.zero);
-        Offset newOffset = _offset * 2 - center;
-
-        controller.update(newCenter: newOffset, newScale: newScale);
-      }
-    };
-  }
-
   void _handleScaleStart(ScaleStartDetails d) {
     _startingFocalPoint = d.focalPoint;
     _previousOffset = _offset;
@@ -232,7 +210,6 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
       return new GestureDetector(
         child: paintWidget(),
-        onDoubleTap: _handleDoubleTap(ctx),
         onScaleStart: _handleScaleStart,
         onScaleUpdate: _handleScaleUpdate,
         onTapUp: _handleTapUp,
