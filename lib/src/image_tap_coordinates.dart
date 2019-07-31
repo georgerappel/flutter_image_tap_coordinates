@@ -11,9 +11,7 @@ import 'package:flutter/rendering.dart';
 /// The tapCoordinates are relative to the X and Y coordinates of the screen.
 typedef TapCoordinatesCallback = void Function(Offset tapCoordinates);
 
-
 class ImageTapCoordinates extends StatefulWidget {
-
   final ImageProvider image;
 
   final double maxScale;
@@ -40,10 +38,10 @@ class ImageTapCoordinates extends StatefulWidget {
   /// position.
   final ImageTapController controller;
 
-
   ImageTapCoordinates(
     this.image, {
     Key key,
+
     /// Maximum ratio to blow up image pixels. A value of 2.0 means that the
     /// a single device pixel will be rendered as up to 4 logical pixels.
     this.maxScale = 2.0,
@@ -53,9 +51,10 @@ class ImageTapCoordinates extends StatefulWidget {
     this.callbackIfOffBounds = true,
     this.backgroundColor = Colors.black,
     this.controller,
+
     /// Placeholder widget to be used while [image] is being resolved.
     this.placeholder,
-  }) : assert(minScale > 0.0),
+  })  : assert(minScale > 0.0),
         super(key: key);
 
   @override
@@ -86,7 +85,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
   @override
   void initState() {
     super.initState();
-    if(widget.controller != null){
+    if (widget.controller != null) {
       controller = widget.controller;
     }
     controller.addListener(controllerListener);
@@ -98,7 +97,9 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
       _image.height.toDouble(),
     );
 
-    if(widget.initScale != null && widget.initScale >= widget.minScale && widget.initScale <= widget.maxScale){
+    if (widget.initScale != null &&
+        widget.initScale >= widget.minScale &&
+        widget.initScale <= widget.maxScale) {
       _scale = widget.initScale;
     } else {
       _scale = math.min(
@@ -116,8 +117,8 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
     _offset = delta / 2.0; // Centers the image
   }
 
-  void controllerListener(){
-    if(controller.scale != null && controller.scale != _scale) {
+  void controllerListener() {
+    if (controller.scale != null && controller.scale != _scale) {
       _scale = controller.scale;
 //      Size fitted = Size(
 //        _imageSize.width * _scale,
@@ -128,18 +129,18 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 //      _offset = delta / 2.0;
     }
 
-    if(controller.center != null && controller.center != _offset) {
+    if (controller.center != null && controller.center != _offset) {
 //      Offset newOffset = Offset(
 //        controller.center.dx / 2 * _scale,
 //        controller.center.dy / 2 * _scale,
 //      );
 //
 //      _previousOffset = _offset;
-      _offset = controller.center ;
+      _offset = controller.center;
       //TODO Correctly handle center changes.
     }
 
-    if(this.mounted) {
+    if (this.mounted) {
       setState(() {});
     }
   }
@@ -166,16 +167,19 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
     setState(() {});
   }
 
-  void _handleTapUp(TapUpDetails details){
+  void _handleTapUp(TapUpDetails details) {
     _box = context.findRenderObject();
     // Get tap position relative to the Widget wrapping the image
     Offset _tapPos = _box.globalToLocal(details.globalPosition);
-    Offset tapCoordinates = Offset((_tapPos.dx - _offset.dx)/_scale, (_tapPos.dy - _offset.dy)/_scale);
+    Offset tapCoordinates = Offset(
+        (_tapPos.dx - _offset.dx) / _scale, (_tapPos.dy - _offset.dy) / _scale);
 
-    if(widget.tapCallback != null) {
-      if(!widget.callbackIfOffBounds){
-        if(tapCoordinates.dx < 0 || tapCoordinates.dx > _imageSize.width
-          || tapCoordinates.dy < 0 || tapCoordinates.dy > _imageSize.height){
+    if (widget.tapCallback != null) {
+      if (!widget.callbackIfOffBounds) {
+        if (tapCoordinates.dx < 0 ||
+            tapCoordinates.dx > _imageSize.width ||
+            tapCoordinates.dy < 0 ||
+            tapCoordinates.dy > _imageSize.height) {
           return; // Return without calling if coordinates are off-bounds
         }
       }
@@ -219,7 +223,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   @override
   void didChangeDependencies() {
-    if(_imageStream == null) {
+    if (_imageStream == null) {
       _resolveImage();
     }
     super.didChangeDependencies();
@@ -233,7 +237,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   void _resolveImage() {
     _imageStream = widget.image.resolve(createLocalImageConfiguration(context));
-    _imageStream.addListener(_handleImageLoaded);
+    _imageStream.addListener(ImageStreamListener(_handleImageLoaded));
   }
 
   void _handleImageLoaded(ImageInfo info, bool synchronousCall) {
@@ -245,7 +249,7 @@ class _TapCoordinatesState extends State<ImageTapCoordinates> {
 
   @override
   void dispose() {
-    _imageStream.removeListener(_handleImageLoaded);
+    _imageStream.removeListener(ImageStreamListener(_handleImageLoaded));
     controller.dispose();
     super.dispose();
   }
@@ -278,16 +282,18 @@ class _ZoomableImagePainter extends CustomPainter {
 }
 
 class ImageTapController extends ValueNotifier<ImageTapControllerValue> {
-  ImageTapController({ Offset center })
-    : super(ImageTapControllerValue(center: center, scale: 0));
+  ImageTapController({Offset center})
+      : super(ImageTapControllerValue(center: center, scale: 0));
 
   Offset get center => value.center;
+
   /// The image coordinates, in pixels, that should be centered on the screen.
   set center(Offset newCenter) {
     value = value.copyWith(center: newCenter);
   }
 
   double get scale => value.scale;
+
   /// Change the image scale
   set scale(double newScale) {
     value = value.copyWith(scale: newScale);
@@ -295,11 +301,9 @@ class ImageTapController extends ValueNotifier<ImageTapControllerValue> {
 
   /// Update more than one variables at the same time. Recommended for
   /// better performance.
-  void update({Offset newCenter, double newScale}){
+  void update({Offset newCenter, double newScale}) {
     value = value.copyWith(
-        center: newCenter ?? value.center,
-        scale: newScale ?? value.scale
-    );
+        center: newCenter ?? value.center, scale: newScale ?? value.scale);
   }
 }
 
@@ -319,10 +323,8 @@ class ImageTapControllerValue {
     double scale,
   }) {
     return ImageTapControllerValue(
-        center: center ?? this.center,
-        scale: scale ?? this.scale,
+      center: center ?? this.center,
+      scale: scale ?? this.scale,
     );
   }
 }
-
-
